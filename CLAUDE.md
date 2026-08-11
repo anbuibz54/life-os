@@ -41,8 +41,14 @@ many domains.
 - **Nothing in `src/server/` imports from `next/*`.** Route handlers are thin:
   parse, authenticate, call a service, serialize. That boundary is what keeps a
   future extraction to a standalone API mechanical instead of a rewrite.
-- Use the Supabase **pooler** URL at runtime, the **direct** URL for Drizzle
-  migrations. Migrations break on transaction-mode pooling.
+- Two connection URLs, both through the pooler; the **port** is what differs.
+  `DATABASE_URL` is **transaction** mode (6543) for runtime. `DIRECT_URL` is
+  **session** mode (5432) for Drizzle migrations. They are not interchangeable:
+  transaction mode hands a backend to the next transaction mid-flight, which
+  breaks DDL, prepared statements, and the advisory lock drizzle-kit takes.
+  (The true direct host `db.<ref>.supabase.co` is *not* usable — Supabase
+  dropped public IPv4 for it, so it does not resolve without the add-on.)
+  Runtime must also pass `prepare: false`; transaction mode cannot cache them.
 - Every foreign key gets an index.
 - Migrations only go forward. No editing applied migrations.
 - Structured logging and Sentry from day one, not after users arrive.

@@ -39,3 +39,9 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# ...but the template belongs in the repo.
+!.env.example
+
+# Original context archive; CLAUDE.md and DECISIONS.md are extracted from it.
+context.zip

@@ -8,7 +8,7 @@
 
    Colour rule: domains carry it, chrome stays quiet, review is nearly drained.
    Nothing here is decorative — every hue below means something. See
-   docs/design-system.md for why.
+   docs/design/SYSTEM.md for why.
    --------------------------------------------------------------------------- */
 
 /* Dark applies from an explicit `.dark` class OR the OS preference, unless an
@@ -63,8 +63,10 @@
   --color-domain-5: var(--domain-5);
   --color-domain-6: var(--domain-6);
 
-  /* Streak grid ramp. One hue, five steps — this measures the loop completing,
-     never capture volume. */
+  /* Streak grid ramp. One hue. Five steps are defined; `StreakGrid` currently
+     uses three of them (nothing / half the loop / both halves) because this
+     measures the loop completing, never capture volume — the extra steps exist
+     for finer granularity later, not for rewarding a bigger day. */
   --color-heat-0: var(--heat-0);
   --color-heat-1: var(--heat-1);
   --color-heat-2: var(--heat-2);
@@ -231,9 +233,98 @@
     @apply bg-background text-foreground;
   }
 
-  /* Content — note bodies, card faces. Everything else stays sans. */
-  .prose-note {
-    @apply font-serif leading-relaxed;
+  /* Motion is for confirming something happened, never for decoration. The
+     only orchestrated moment in the product is a note landing after capture. */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   Semantic type roles.
+
+   These exist so a screen is described by what a thing IS, not by a stack of
+   utilities. "A card front is `.t-card-front`" survives a scale change;
+   "text-xl font-serif leading-snug tracking-tight" does not, and drifts the
+   moment someone types it from memory.
+   --------------------------------------------------------------------------- */
+@layer components {
+  /* Content — set in the reading face. */
+
+  /** Note body. Markdown renders into this. */
+  .t-note {
+    @apply font-serif text-[1.0625rem] leading-relaxed;
     text-wrap: pretty;
+  }
+
+  /** Card front. A situation you parse fast — the largest content type. */
+  .t-card-front {
+    @apply font-serif text-xl leading-snug tracking-tight;
+    text-wrap: pretty;
+  }
+
+  /** Card back. A decision. Quieter than the front, same face. */
+  .t-card-back {
+    @apply font-serif text-base leading-relaxed text-muted-foreground;
+    text-wrap: pretty;
+  }
+
+  /** Screen title. The product's voice; the only serif in the chrome. */
+  .t-title {
+    @apply font-serif text-2xl leading-tight tracking-tight;
+    text-wrap: balance;
+  }
+
+  /* Machinery — set in the UI face. */
+
+  /** Default UI text: list rows, descriptions, links. */
+  .t-ui {
+    @apply text-sm leading-normal;
+  }
+
+  /** Section headings inside a screen. */
+  .t-section {
+    @apply text-sm font-medium leading-normal;
+  }
+
+  /** Uppercase marker: day dividers, card type, domain name. */
+  .t-marker {
+    @apply text-[0.6875rem] font-medium tracking-[0.09em] uppercase text-muted-foreground;
+  }
+
+  /** Numbers and timestamps. Tabular so digits do not jitter as they change. */
+  .t-data {
+    @apply font-mono text-xs tabular-nums text-muted-foreground;
+  }
+
+  /* ---------------------------------------------------------------------
+     Layout rhythm. Screens use these rather than inventing spacing.
+     --------------------------------------------------------------------- */
+
+  /** Every screen's horizontal padding and max width. */
+  .l-screen {
+    @apply mx-auto w-full max-w-md px-5;
+  }
+
+  /** Vertical rhythm between blocks on a screen. */
+  .l-stack {
+    @apply flex flex-col gap-5;
+  }
+
+  /** A label and its control. */
+  .l-field {
+    @apply flex flex-col gap-2;
+  }
+
+  /** A list of rows separated by rules, not gaps. */
+  .l-rows {
+    @apply flex flex-col;
   }
 }

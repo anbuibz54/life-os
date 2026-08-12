@@ -96,6 +96,13 @@ export const domains = pgTable('domains', {
   key: text('key').notNull(),
   name: text('name').notNull(),
   fieldDefs: jsonb('field_defs').notNull().default(sql`'{}'::jsonb`),
+  /**
+   * Which of the six palette slots this domain wears (1–6). Stored rather than
+   * hashed from the key so it stays stable when a domain is renamed, and can
+   * be changed by hand when two adjacent domains land on similar hues.
+   * See docs/design/SYSTEM.md.
+   */
+  accent: smallint('accent').notNull().default(1),
 }, (t) => [
   uniqueIndex('domains_key_idx').on(t.key),
 ])

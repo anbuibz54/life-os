@@ -21,8 +21,14 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 
-/** Prefixes reachable while signed out. Everything else requires a session. */
-const PUBLIC_PREFIXES = ['/login', '/signup', '/auth']
+/**
+ * Prefixes reachable while signed out. Everything else requires a session.
+ *
+ * `/design` is the component gallery. It is safe to list here because the page
+ * itself returns 404 in production — signing in to look at swatches would be
+ * friction for no gain in development.
+ */
+const PUBLIC_PREFIXES = ['/login', '/signup', '/auth', '/design']
 
 function isPublic(pathname: string) {
   return PUBLIC_PREFIXES.some((p) => pathname === p || pathname.startsWith(`${p}/`))

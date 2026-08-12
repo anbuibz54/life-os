@@ -165,7 +165,7 @@ that user's rows.
 
 ## UX principles
 
-Visual language, tokens, and the colour rules live in `docs/design-system.md`.
+Visual language, tokens, and the colour rules live in `docs/design/SYSTEM.md`.
 Direction: serif for content, sans for controls; colour carried by domains,
 never by chrome; review is nearly drained of it.
 

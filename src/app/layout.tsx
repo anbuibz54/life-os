@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 
 /**
  * Content face. Literata is drawn for long-form reading on screen, which is
- * what note bodies and card faces are — see docs/design-system.md.
+ * what note bodies and card faces are — see docs/design/SYSTEM.md.
  */
 const literata = Literata({
   variable: '--font-literata',

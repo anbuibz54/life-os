@@ -1,0 +1,1 @@
+ALTER TABLE "domains" ADD COLUMN "accent" smallint DEFAULT 1 NOT NULL;

@@ -165,6 +165,10 @@ that user's rows.
 
 ## UX principles
 
+Visual language, tokens, and the colour rules live in `docs/design-system.md`.
+Direction: serif for content, sans for controls; colour carried by domains,
+never by chrome; review is nearly drained of it.
+
 **Progressive unlock.** Never show an empty review tab. Surfaces appear as they
 become real: zero notes → one capture box. First concept → cards unlock. First
 card → review unlocks. Inbox and search later. Gate at one, not twenty.

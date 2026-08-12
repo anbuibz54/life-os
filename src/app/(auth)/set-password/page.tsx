@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { requireUser } from '@/lib/auth/dal'
+import { AuthHeading } from '../_components/auth-heading'
 import { SetPasswordForm } from '../_components/set-password-form'
 
 /**
@@ -25,23 +26,20 @@ export default async function SetPasswordPage({
   const skipTo = next?.startsWith('/') ? next : '/'
 
   return (
-    <main className="mx-auto flex min-h-dvh w-full max-w-sm flex-col justify-center gap-6 p-6">
-      <div>
-        <h1 className="text-xl font-semibold">Add a password</h1>
-        <p className="mt-1 text-sm text-neutral-600 dark:text-neutral-400">
-          You signed in with {via} as {user.email}. Set a password and you can
-          use either from now on.
-        </p>
-      </div>
+    <>
+      <AuthHeading title="Add a password">
+        You signed in with {via} as {user.email}. Set a password and you can use
+        either from now on.
+      </AuthHeading>
 
       <SetPasswordForm />
 
       <Link
         href={skipTo}
-        className="text-center text-sm text-neutral-600 underline underline-offset-4 dark:text-neutral-400"
+        className="text-center text-sm text-muted-foreground underline underline-offset-4 hover:no-underline"
       >
         Skip — keep using {via}
       </Link>
-    </main>
+    </>
   )
 }

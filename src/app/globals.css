@@ -1,26 +1,239 @@
 @import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+/* ---------------------------------------------------------------------------
+   Life OS design tokens — direction C, "quiet middle".
+   Serif for the thinking, sans for the machinery.
+
+   Colour rule: domains carry it, chrome stays quiet, review is nearly drained.
+   Nothing here is decorative — every hue below means something. See
+   docs/design-system.md for why.
+   --------------------------------------------------------------------------- */
+
+/* Dark applies from an explicit `.dark` class OR the OS preference, unless an
+   explicit `.light` ancestor overrides it. Most components should just use the
+   semantic tokens and never need this variant. */
+@custom-variant dark {
+  &:is(.dark *) {
+    @slot;
+  }
+  @media (prefers-color-scheme: dark) {
+    &:not(.light *) {
+      @slot;
+    }
+  }
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+  /* Content face: note bodies and card faces. A card front is a sentence you
+     parse under time pressure, not a UI label. */
+  --font-serif: var(--font-literata);
+  --font-heading: var(--font-geist-sans);
+
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  /* Domain palette. Equal lightness across the set so no domain shouts, and
+     desaturated on dark because saturated hues vibrate on a dark ground at
+     night — which is when this app is actually used. */
+  --color-domain-1: var(--domain-1);
+  --color-domain-2: var(--domain-2);
+  --color-domain-3: var(--domain-3);
+  --color-domain-4: var(--domain-4);
+  --color-domain-5: var(--domain-5);
+  --color-domain-6: var(--domain-6);
+
+  /* Streak grid ramp. One hue, five steps — this measures the loop completing,
+     never capture volume. */
+  --color-heat-0: var(--heat-0);
+  --color-heat-1: var(--heat-1);
+  --color-heat-2: var(--heat-2);
+  --color-heat-3: var(--heat-3);
+  --color-heat-4: var(--heat-4);
+
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
 }
 
+/* --------------------------------- light --------------------------------- */
+:root {
+  /* Neutrals carry a slight cool bias rather than being pure grey — chosen,
+     not inherited. */
+  --background: oklch(0.988 0.002 250);
+  --foreground: oklch(0.185 0.012 255);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.185 0.012 255);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.185 0.012 255);
+
+  /* The single filled control reads as ink, not as a brand colour. Chrome
+     stays quiet so domain colour is the only thing that signals. */
+  --primary: oklch(0.225 0.014 255);
+  --primary-foreground: oklch(0.985 0.002 250);
+  --secondary: oklch(0.965 0.004 250);
+  --secondary-foreground: oklch(0.225 0.014 255);
+  --muted: oklch(0.965 0.004 250);
+  --muted-foreground: oklch(0.505 0.014 253);
+  --accent: oklch(0.955 0.006 250);
+  --accent-foreground: oklch(0.225 0.014 255);
+
+  /* Used for genuine data loss only. Never for overdue counts, never on a
+     rating button — a red "Again" makes honesty feel like failure. */
+  --destructive: oklch(0.55 0.2 25);
+
+  --border: oklch(0.905 0.005 250);
+  --input: oklch(0.905 0.005 250);
+  --ring: oklch(0.62 0.03 253);
+
+  --domain-1: #3c6491;
+  --domain-2: #2f7d70;
+  --domain-3: #a8574a;
+  --domain-4: #8a6520;
+  --domain-5: #6a5aa6;
+  --domain-6: #5d7a38;
+
+  --heat-0: #e8ebef;
+  --heat-1: #c3d2e2;
+  --heat-2: #8fb0d0;
+  --heat-3: #5b87b7;
+  --heat-4: #3c6491;
+
+  --chart-1: var(--domain-1);
+  --chart-2: var(--domain-2);
+  --chart-3: var(--domain-3);
+  --chart-4: var(--domain-4);
+  --chart-5: var(--domain-5);
+
+  /* Crisper than shadcn's default. Rounded-everything reads as unconsidered. */
+  --radius: 0.375rem;
+}
+
+/* --------------------------------- dark ---------------------------------- */
+/* Defined once, applied from both the OS preference and an explicit class. */
 @media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+  :root:not(.light) {
+    --background: oklch(0.165 0.008 255);
+    --foreground: oklch(0.935 0.004 250);
+    --card: oklch(0.205 0.009 255);
+    --card-foreground: oklch(0.935 0.004 250);
+    --popover: oklch(0.205 0.009 255);
+    --popover-foreground: oklch(0.935 0.004 250);
+
+    --primary: oklch(0.925 0.004 250);
+    --primary-foreground: oklch(0.185 0.010 255);
+    --secondary: oklch(0.255 0.010 255);
+    --secondary-foreground: oklch(0.935 0.004 250);
+    --muted: oklch(0.255 0.010 255);
+    --muted-foreground: oklch(0.665 0.012 253);
+    --accent: oklch(0.265 0.011 255);
+    --accent-foreground: oklch(0.935 0.004 250);
+
+    --destructive: oklch(0.63 0.17 25);
+
+    --border: oklch(0.285 0.011 255);
+    --input: oklch(0.305 0.012 255);
+    --ring: oklch(0.58 0.03 253);
+
+    --domain-1: #85a8d4;
+    --domain-2: #6fb8ab;
+    --domain-3: #d1968a;
+    --domain-4: #ccaa6b;
+    --domain-5: #a99bd9;
+    --domain-6: #a0bb7d;
+
+    --heat-0: #1a1e24;
+    --heat-1: #243244;
+    --heat-2: #3a5673;
+    --heat-3: #5c83ab;
+    --heat-4: #85a8d4;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+.dark {
+  --background: oklch(0.165 0.008 255);
+  --foreground: oklch(0.935 0.004 250);
+  --card: oklch(0.205 0.009 255);
+  --card-foreground: oklch(0.935 0.004 250);
+  --popover: oklch(0.205 0.009 255);
+  --popover-foreground: oklch(0.935 0.004 250);
+
+  --primary: oklch(0.925 0.004 250);
+  --primary-foreground: oklch(0.185 0.010 255);
+  --secondary: oklch(0.255 0.010 255);
+  --secondary-foreground: oklch(0.935 0.004 250);
+  --muted: oklch(0.255 0.010 255);
+  --muted-foreground: oklch(0.665 0.012 253);
+  --accent: oklch(0.265 0.011 255);
+  --accent-foreground: oklch(0.935 0.004 250);
+
+  --destructive: oklch(0.63 0.17 25);
+
+  --border: oklch(0.285 0.011 255);
+  --input: oklch(0.305 0.012 255);
+  --ring: oklch(0.58 0.03 253);
+
+  --domain-1: #85a8d4;
+  --domain-2: #6fb8ab;
+  --domain-3: #d1968a;
+  --domain-4: #ccaa6b;
+  --domain-5: #a99bd9;
+  --domain-6: #a0bb7d;
+
+  --heat-0: #1a1e24;
+  --heat-1: #243244;
+  --heat-2: #3a5673;
+  --heat-3: #5c83ab;
+  --heat-4: #85a8d4;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+
+  html {
+    @apply font-sans;
+    /* Tells the browser to render form controls and scrollbars for whichever
+       theme is active. Without it, native widgets stay light on a dark page. */
+    color-scheme: light dark;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+  }
+
+  /* Content — note bodies, card faces. Everything else stays sans. */
+  .prose-note {
+    @apply font-serif leading-relaxed;
+    text-wrap: pretty;
+  }
 }

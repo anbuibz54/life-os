@@ -1,48 +1,52 @@
+import { Button } from '@/components/ui/button'
+import { AppShell, Counters } from '@/components/app-shell'
 import { requireUser } from '@/lib/auth/dal'
 import { signOut } from './(auth)/actions'
 
 /**
- * Placeholder home. Step 2 only proves the loop: a session exists, the
- * `public.users` row was provisioned from it, and sign-out works.
+ * Home at state S0.
  *
- * Step 3 replaces this with the capture box. Per progressive unlock, zero
- * notes means exactly one thing on screen — a place to write — plus the small
- * accumulation signals (note count, concept count, streak).
+ * Step 2 only proves the loop: a session exists, the `public.users` row was
+ * provisioned from it, and sign-out works. Step 3 replaces the placeholder
+ * below with the capture box — and passes real destinations to AppShell as
+ * they become real.
  */
 export default async function Home() {
-  const { user, hasPassword, providers } = await requireUser()
+  const { user, hasPassword } = await requireUser()
 
   return (
-    <main className="mx-auto flex min-h-dvh w-full max-w-md flex-col justify-center gap-6 p-6">
-      <div>
-        <h1 className="text-xl font-semibold">Signed in</h1>
-        <p className="mt-1 text-sm text-neutral-600 dark:text-neutral-400">{user.email}</p>
-      </div>
+    <AppShell destinations={[]}>
+      <h1 className="font-serif text-2xl leading-tight tracking-tight">
+        Nothing captured yet.
+      </h1>
 
-      <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
-        <dt className="text-neutral-500">User row</dt>
-        <dd className="font-mono text-xs">{user.id}</dd>
-        <dt className="text-neutral-500">Sign-in methods</dt>
-        <dd>{providers.join(', ') || 'none'}</dd>
+      <p className="prose-note text-sm text-muted-foreground text-pretty">
+        The capture box lands here in step 3. Until then this page exists to
+        prove the session resolves and the user row is provisioned from it.
+      </p>
+
+      <dl className="grid grid-cols-[6rem_1fr] gap-x-4 gap-y-1.5 text-sm">
+        <dt className="text-muted-foreground">Signed in</dt>
+        <dd className="break-all">{user.email}</dd>
+        <dt className="text-muted-foreground">User row</dt>
+        <dd className="font-mono text-xs break-all text-muted-foreground">{user.id}</dd>
       </dl>
 
-      {!hasPassword ? (
-        <a
-          href="/set-password"
-          className="rounded-md border border-neutral-300 px-3 py-2 text-center text-sm dark:border-neutral-700"
-        >
-          Add a password
-        </a>
-      ) : null}
+      <div className="flex flex-col gap-2">
+        {!hasPassword ? (
+          <Button variant="outline" asChild>
+            <a href="/set-password">Add a password</a>
+          </Button>
+        ) : null}
 
-      <form action={signOut}>
-        <button
-          type="submit"
-          className="w-full rounded-md bg-neutral-900 px-3 py-2 text-sm font-medium text-white dark:bg-neutral-100 dark:text-neutral-900"
-        >
-          Sign out
-        </button>
-      </form>
-    </main>
+        <form action={signOut}>
+          <Button type="submit" variant="outline" className="w-full">
+            Sign out
+          </Button>
+        </form>
+      </div>
+
+      <Counters items={['0 notes', '0 concepts', 'streak 0']} />
+    </AppShell>
   )
 }

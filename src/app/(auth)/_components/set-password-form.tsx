@@ -1,6 +1,10 @@
 'use client'
 
 import { useActionState } from 'react'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { FormError } from './form-error'
 import { setPassword, type AuthFormState } from '../actions'
 
 const initialState: AuthFormState = { error: null }
@@ -9,44 +13,36 @@ export function SetPasswordForm() {
   const [state, formAction, pending] = useActionState(setPassword, initialState)
 
   return (
-    <form action={formAction} className="flex flex-col gap-3">
-      <label className="flex flex-col gap-1 text-sm">
-        <span className="text-neutral-600 dark:text-neutral-400">Password</span>
-        <input
+    <form action={formAction} className="flex flex-col gap-4">
+      <div className="flex flex-col gap-2">
+        <Label htmlFor="password">Password</Label>
+        <Input
+          id="password"
           type="password"
           name="password"
           required
           minLength={8}
           autoComplete="new-password"
-          className="rounded-md border border-neutral-300 bg-transparent px-3 py-2 outline-none focus:border-neutral-500 dark:border-neutral-700"
         />
-      </label>
+      </div>
 
-      <label className="flex flex-col gap-1 text-sm">
-        <span className="text-neutral-600 dark:text-neutral-400">Confirm password</span>
-        <input
+      <div className="flex flex-col gap-2">
+        <Label htmlFor="confirm">Confirm password</Label>
+        <Input
+          id="confirm"
           type="password"
           name="confirm"
           required
           minLength={8}
           autoComplete="new-password"
-          className="rounded-md border border-neutral-300 bg-transparent px-3 py-2 outline-none focus:border-neutral-500 dark:border-neutral-700"
         />
-      </label>
+      </div>
 
-      {state.error ? (
-        <p role="alert" className="text-sm text-red-600 dark:text-red-400">
-          {state.error}
-        </p>
-      ) : null}
+      <FormError>{state.error}</FormError>
 
-      <button
-        type="submit"
-        disabled={pending}
-        className="rounded-md bg-neutral-900 px-3 py-2 text-sm font-medium text-white disabled:opacity-50 dark:bg-neutral-100 dark:text-neutral-900"
-      >
+      <Button type="submit" disabled={pending}>
         {pending ? 'Saving…' : 'Set password'}
-      </button>
+      </Button>
     </form>
   )
 }

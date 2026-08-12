@@ -1,52 +1,53 @@
-import { Button } from '@/components/ui/button'
 import { AppShell, Counters } from '@/components/app-shell'
+import { NotesSurface, type NoteView } from '@/components/capture/notes-surface'
 import { requireUser } from '@/lib/auth/dal'
-import { signOut } from './(auth)/actions'
+import { db } from '@/server/db'
+import { countNotes, listNotes } from '@/server/notes/service'
+import { recentActivity, streakFrom, todayInZone } from '@/server/activity/service'
 
 /**
- * Home at state S0.
+ * Home — the capture surface.
  *
- * Step 2 only proves the loop: a session exists, the `public.users` row was
- * provisioned from it, and sign-out works. Step 3 replaces the placeholder
- * below with the capture box — and passes real destinations to AppShell as
- * they become real.
+ * Progressive unlock: at zero notes this is a capture box and three counters,
+ * and nothing else. No navigation, because there is nowhere real to go yet.
+ * Destinations appear as they become true — Review once a card exists, Inbox
+ * once something needs filing.
+ *
+ * The counters are visible from note one. They are small accumulation signals,
+ * not scores: plain text, no colour, never celebrated.
  */
 export default async function Home() {
-  const { user, hasPassword } = await requireUser()
+  const { user } = await requireUser()
+
+  const [notes, noteCount, activity] = await Promise.all([
+    listNotes(db, user.id, { limit: 50 }),
+    countNotes(db, user.id),
+    recentActivity(db, user.id),
+  ])
+
+  const streak = streakFrom(activity, todayInZone())
+
+  const initialNotes: NoteView[] = notes.map((n) => ({
+    id: n.id,
+    body: n.body,
+    createdAt: n.createdAt.toISOString(),
+  }))
 
   return (
-    <AppShell destinations={[]}>
-      <h1 className="font-serif text-2xl leading-tight tracking-tight">
-        Nothing captured yet.
-      </h1>
+    <AppShell
+      // Settings is the one destination that is real from day one. Review and
+      // Inbox join it when a card exists and when something needs filing.
+      destinations={[{ href: '/settings', label: 'Account' }]}
+    >
+      <NotesSurface initialNotes={initialNotes} />
 
-      <p className="prose-note text-sm text-muted-foreground text-pretty">
-        The capture box lands here in step 3. Until then this page exists to
-        prove the session resolves and the user row is provisioned from it.
-      </p>
-
-      <dl className="grid grid-cols-[6rem_1fr] gap-x-4 gap-y-1.5 text-sm">
-        <dt className="text-muted-foreground">Signed in</dt>
-        <dd className="break-all">{user.email}</dd>
-        <dt className="text-muted-foreground">User row</dt>
-        <dd className="font-mono text-xs break-all text-muted-foreground">{user.id}</dd>
-      </dl>
-
-      <div className="flex flex-col gap-2">
-        {!hasPassword ? (
-          <Button variant="outline" asChild>
-            <a href="/set-password">Add a password</a>
-          </Button>
-        ) : null}
-
-        <form action={signOut}>
-          <Button type="submit" variant="outline" className="w-full">
-            Sign out
-          </Button>
-        </form>
-      </div>
-
-      <Counters items={['0 notes', '0 concepts', 'streak 0']} />
+      <Counters
+        items={[
+          `${noteCount} ${noteCount === 1 ? 'note' : 'notes'}`,
+          '0 concepts',
+          `streak ${streak}`,
+        ]}
+      />
     </AppShell>
   )
 }

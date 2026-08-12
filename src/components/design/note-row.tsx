@@ -12,23 +12,23 @@ import { DomainDot, type DomainAccent } from './domain-dot'
  * An unfiled note (no concept yet) is shown plainly, with no warning colour
  * and no badge. Unfiled is a legitimate state, not debt — capture must never
  * block on classification, so the result of that cannot look like a mistake.
+ *
+ * `href` is optional. Until a note detail screen exists, a row that looks
+ * clickable and goes nowhere is worse than a row that does not invite the tap.
  */
 
 export type NoteRowProps = {
-  href: string
   body: string
   createdAt: string
+  href?: string
   domain?: { name: string; accent: DomainAccent }
   /** True when the note has an image in its body. */
   hasImage?: boolean
 }
 
 export function NoteRow({ href, body, createdAt, domain, hasImage }: NoteRowProps) {
-  return (
-    <Link
-      href={href}
-      className="flex items-start gap-3 py-3 not-last:border-b not-last:border-border hover:bg-accent focus-visible:bg-accent"
-    >
+  const content = (
+    <>
       {domain ? (
         <DomainDot accent={domain.accent} name={domain.name} className="mt-1.5" />
       ) : (
@@ -38,11 +38,26 @@ export function NoteRow({ href, body, createdAt, domain, hasImage }: NoteRowProp
       )}
 
       <span className="min-w-0 flex-1">
-        <span className={cn('t-ui line-clamp-2 block', !domain && 'text-foreground')}>{body}</span>
+        <span className="t-ui line-clamp-2 block">{body}</span>
         {hasImage ? <span className="t-marker mt-1 block">Image</span> : null}
       </span>
 
       <time className="t-data mt-0.5 shrink-0">{createdAt}</time>
+    </>
+  )
+
+  const shared = 'flex items-start gap-3 py-3 not-last:border-b not-last:border-border'
+
+  if (!href) {
+    return <div className={shared}>{content}</div>
+  }
+
+  return (
+    <Link
+      href={href}
+      className={cn(shared, 'hover:bg-accent focus-visible:bg-accent')}
+    >
+      {content}
     </Link>
   )
 }

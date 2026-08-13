@@ -2,15 +2,19 @@
 
 import { useOptimistic, useState, useTransition } from 'react'
 import { captureNote } from '@/app/_actions/notes'
+import { createConceptAndFile, fileNoteUnderConcept } from '@/app/_actions/concepts'
 import { CaptureBox } from './capture-box'
 import { DayDivider, NoteRow } from '@/components/design/note-row'
+import { ConceptPicker, type PickerConcept, type PickerDomain } from '@/components/concepts/concept-picker'
 import { FormError } from '@/app/(auth)/_components/form-error'
+import { Button } from '@/components/ui/button'
 
 export type NoteView = {
   id: string
   body: string
   /** ISO string — Dates do not survive the server/client boundary intact. */
   createdAt: string
+  concept: { id: string; name: string; domain: { name: string; accent: number } } | null
 }
 
 /**
@@ -21,14 +25,23 @@ export type NoteView = {
  * *feels*, and waiting for the server to answer before showing your own words
  * breaks it even when the request is fast.
  */
-export function NotesSurface({ initialNotes }: { initialNotes: NoteView[] }) {
+export function NotesSurface({
+  initialNotes,
+  concepts,
+  domains,
+}: {
+  initialNotes: NoteView[]
+  concepts: PickerConcept[]
+  domains: PickerDomain[]
+}) {
   const [pending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
+  const [filing, setFiling] = useState<NoteView | null>(null)
 
   const [notes, addOptimistic] = useOptimistic(
     initialNotes,
     (state: NoteView[], body: string) => [
-      { id: `pending-${state.length}`, body, createdAt: new Date().toISOString() },
+      { id: `pending-${state.length}`, body, createdAt: new Date().toISOString(), concept: null },
       ...state,
     ],
   )
@@ -41,6 +54,22 @@ export function NotesSurface({ initialNotes }: { initialNotes: NoteView[] }) {
       // midnight rather than UTC's. `en-CA` formats as YYYY-MM-DD.
       const localDate = new Date().toLocaleDateString('en-CA')
       const result = await captureNote({ body, localDate })
+      if (result.error) setError(result.error)
+    })
+  }
+
+  function onSelectConcept(noteId: string, conceptId: string) {
+    setError(null)
+    startTransition(async () => {
+      const result = await fileNoteUnderConcept(noteId, conceptId)
+      if (result.error) setError(result.error)
+    })
+  }
+
+  function onCreateConcept(noteId: string, name: string, domainId: string) {
+    setError(null)
+    startTransition(async () => {
+      const result = await createConceptAndFile(noteId, { name, domainId })
       if (result.error) setError(result.error)
     })
   }
@@ -58,14 +87,51 @@ export function NotesSurface({ initialNotes }: { initialNotes: NoteView[] }) {
             <section key={label} className="l-rows">
               <DayDivider label={label} />
               {items.map((note) => (
-                <NoteRow key={note.id} body={note.body} createdAt={timeOf(note.createdAt)} />
+                <NoteRow
+                  key={note.id}
+                  body={note.body}
+                  createdAt={timeOf(note.createdAt)}
+                  concept={note.concept ?? undefined}
+                  action={
+                    // Optimistic rows have no real id to file against yet.
+                    note.id.startsWith('pending-') ? undefined : (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-muted-foreground"
+                        onClick={() => setFiling(note)}
+                      >
+                        {note.concept ? 'Refile' : 'File'}
+                      </Button>
+                    )
+                  }
+                />
               ))}
             </section>
           ))}
         </div>
       ) : null}
+
+      {filing ? (
+        <ConceptPicker
+          open
+          onOpenChange={(next) => {
+            if (!next) setFiling(null)
+          }}
+          concepts={concepts}
+          domains={domains}
+          noteExcerpt={excerpt(filing.body)}
+          onSelect={(conceptId) => onSelectConcept(filing.id, conceptId)}
+          onCreate={(name, domainId) => onCreateConcept(filing.id, name, domainId)}
+        />
+      ) : null}
     </>
   )
+}
+
+function excerpt(body: string) {
+  const oneLine = body.replace(/\s+/g, ' ').trim()
+  return oneLine.length > 90 ? `${oneLine.slice(0, 90)}…` : oneLine
 }
 
 function timeOf(iso: string) {

@@ -1,17 +1,18 @@
-import { AppShell, Counters } from '@/components/app-shell'
+import { AppShell, Counters, type Destination } from '@/components/app-shell'
 import { NotesSurface, type NoteView } from '@/components/capture/notes-surface'
 import { requireUser } from '@/lib/auth/dal'
 import { db } from '@/server/db'
 import { countNotes, listNotes } from '@/server/notes/service'
+import { countConcepts, listConcepts } from '@/server/concepts/service'
+import { listDomains } from '@/server/domains/service'
 import { recentActivity, streakFrom, todayInZone } from '@/server/activity/service'
 
 /**
  * Home — the capture surface.
  *
- * Progressive unlock: at zero notes this is a capture box and three counters,
- * and nothing else. No navigation, because there is nowhere real to go yet.
- * Destinations appear as they become true — Review once a card exists, Inbox
- * once something needs filing.
+ * Progressive unlock: at zero notes this is a capture box and three counters.
+ * Concepts appears as a destination the moment the first one exists; Review
+ * and Inbox join it when a card exists and when something needs filing.
  *
  * The counters are visible from note one. They are small accumulation signals,
  * not scores: plain text, no colour, never celebrated.
@@ -19,9 +20,14 @@ import { recentActivity, streakFrom, todayInZone } from '@/server/activity/servi
 export default async function Home() {
   const { user } = await requireUser()
 
-  const [notes, noteCount, activity] = await Promise.all([
+  const [notes, noteCount, conceptCount, concepts, domains, activity] = await Promise.all([
     listNotes(db, user.id, { limit: 50 }),
     countNotes(db, user.id),
+    countConcepts(db, user.id),
+    // The picker filters client-side, so it needs the whole set. At the point
+    // this stops being reasonable, filing has bigger problems than latency.
+    listConcepts(db, user.id, { limit: 200 }),
+    listDomains(db),
     recentActivity(db, user.id),
   ])
 
@@ -31,20 +37,32 @@ export default async function Home() {
     id: n.id,
     body: n.body,
     createdAt: n.createdAt.toISOString(),
+    concept: n.concept,
   }))
 
+  const destinations: Destination[] = []
+  if (conceptCount > 0) {
+    destinations.push({ href: '/concepts', label: 'Concepts', count: conceptCount })
+  }
+  destinations.push({ href: '/settings', label: 'Account' })
+
   return (
-    <AppShell
-      // Settings is the one destination that is real from day one. Review and
-      // Inbox join it when a card exists and when something needs filing.
-      destinations={[{ href: '/settings', label: 'Account' }]}
-    >
-      <NotesSurface initialNotes={initialNotes} />
+    <AppShell destinations={destinations}>
+      <NotesSurface
+        initialNotes={initialNotes}
+        concepts={concepts.map((c) => ({
+          id: c.id,
+          name: c.name,
+          domain: { name: c.domain.name, accent: c.domain.accent },
+          noteCount: c.noteCount,
+        }))}
+        domains={domains.map((d) => ({ id: d.id, name: d.name, accent: d.accent }))}
+      />
 
       <Counters
         items={[
           `${noteCount} ${noteCount === 1 ? 'note' : 'notes'}`,
-          '0 concepts',
+          `${conceptCount} ${conceptCount === 1 ? 'concept' : 'concepts'}`,
           `streak ${streak}`,
         ]}
       />

@@ -13,6 +13,18 @@ import { cn } from '@/lib/utils'
 
 export type DomainAccent = 1 | 2 | 3 | 4 | 5 | 6
 
+/**
+ * Narrows a smallint from the database to a palette slot.
+ *
+ * Postgres will happily hold a 7 that the palette has no colour for. Wrapping
+ * rather than throwing: a domain rendering in the wrong colour is a much
+ * smaller problem than a screen that will not render at all.
+ */
+export function asAccent(value: number): DomainAccent {
+  const slot = ((Math.trunc(value) - 1) % 6 + 6) % 6 + 1
+  return slot as DomainAccent
+}
+
 const ACCENT: Record<DomainAccent, string> = {
   1: 'bg-domain-1',
   2: 'bg-domain-2',

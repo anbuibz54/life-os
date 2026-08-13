@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
-import { DomainDot, type DomainAccent } from './domain-dot'
+import { DomainDot, asAccent } from './domain-dot'
 
 /**
  * One note in a list.
@@ -9,28 +9,36 @@ import { DomainDot, type DomainAccent } from './domain-dot'
  * stack of cards, and this list gets long. Body text is clamped to two lines;
  * the full note lives on its own screen.
  *
- * An unfiled note (no concept yet) is shown plainly, with no warning colour
- * and no badge. Unfiled is a legitimate state, not debt — capture must never
- * block on classification, so the result of that cannot look like a mistake.
+ * An unfiled note is shown plainly, with no warning colour and no badge.
+ * Unfiled is a legitimate state, not debt — capture must never block on
+ * classification, so the result of that cannot look like a mistake.
  *
- * `href` is optional. Until a note detail screen exists, a row that looks
- * clickable and goes nowhere is worse than a row that does not invite the tap.
+ * `href` is optional: until a note detail screen exists, a row that looks
+ * clickable and goes nowhere is worse than one that does not invite the tap.
+ * A row carrying an `action` is never a link, because a button inside an
+ * anchor is invalid and swallows the tap it was meant to receive.
  */
 
 export type NoteRowProps = {
   body: string
   createdAt: string
   href?: string
-  domain?: { name: string; accent: DomainAccent }
+  concept?: { name: string; domain: { name: string; accent: number } }
   /** True when the note has an image in its body. */
   hasImage?: boolean
+  /** Trailing control — filing, for example. */
+  action?: React.ReactNode
 }
 
-export function NoteRow({ href, body, createdAt, domain, hasImage }: NoteRowProps) {
+export function NoteRow({ href, body, createdAt, concept, hasImage, action }: NoteRowProps) {
   const content = (
     <>
-      {domain ? (
-        <DomainDot accent={domain.accent} name={domain.name} className="mt-1.5" />
+      {concept ? (
+        <DomainDot
+          accent={asAccent(concept.domain.accent)}
+          name={concept.domain.name}
+          className="mt-1.5"
+        />
       ) : (
         // Keeps unfiled notes aligned with filed ones. No dot, no placeholder
         // colour, no implication that something is missing.
@@ -39,6 +47,7 @@ export function NoteRow({ href, body, createdAt, domain, hasImage }: NoteRowProp
 
       <span className="min-w-0 flex-1">
         <span className="t-ui line-clamp-2 block">{body}</span>
+        {concept ? <span className="t-marker mt-1 block">{concept.name}</span> : null}
         {hasImage ? <span className="t-marker mt-1 block">Image</span> : null}
       </span>
 
@@ -48,15 +57,19 @@ export function NoteRow({ href, body, createdAt, domain, hasImage }: NoteRowProp
 
   const shared = 'flex items-start gap-3 py-3 not-last:border-b not-last:border-border'
 
-  if (!href) {
-    return <div className={shared}>{content}</div>
+  if (action) {
+    return (
+      <div className={shared}>
+        {content}
+        <span className="shrink-0">{action}</span>
+      </div>
+    )
   }
 
+  if (!href) return <div className={shared}>{content}</div>
+
   return (
-    <Link
-      href={href}
-      className={cn(shared, 'hover:bg-accent focus-visible:bg-accent')}
-    >
+    <Link href={href} className={cn(shared, 'hover:bg-accent focus-visible:bg-accent')}>
       {content}
     </Link>
   )

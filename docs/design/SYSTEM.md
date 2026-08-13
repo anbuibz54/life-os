@@ -155,6 +155,19 @@ Mobile-first. `max-w-md` for product screens, `px-5`.
 **Lists use rules, not cards.** These lists get long, and a dense list reads
 faster than a stack of boxes.
 
+### Filing, in one selection
+
+The concept picker offers matching concepts *and* "Create … in ‹domain›" rows
+for every domain, in the same list. Filing into a brand-new concept therefore
+costs the same as filing into an existing one: type, arrow, Enter.
+
+The rejected alternative — create a concept, find it again, then file into it —
+turns a five-second decision into a chore, and filing is already the step people
+skip. Everything the inbox is for depends on this staying cheap.
+
+Create rows are suppressed when the typed name already exists. Two concepts
+called "B-tree indexes" is the exact failure this surface prevents.
+
 **Elevation is nearly flat.** Borders, not shadows. Shadow is reserved for
 things that genuinely float — popovers, sheets.
 
@@ -208,7 +221,8 @@ Owned here — edit them freely. Verified on Tailwind 4 and React 19.
 | `StreakGrid` | Intensity is loop completion. Takes `{date, captured, reviewed}` and does the mapping itself, so the rule cannot be got wrong at a call site |
 | `CardFace` | All four types identical. Reserves the answer's space before reveal, so buttons do not shift under a reaching thumb |
 | `RatingButtons` | Four neutral buttons, keys 1–4. Ignores keystrokes in editable fields — cards are editable inline during review |
-| `NoteRow` / `DayDivider` | Rules not gaps, body clamped to two lines, unfiled notes aligned with filed ones |
+| `NoteRow` / `DayDivider` | Rules not gaps, body clamped to two lines, unfiled notes aligned with filed ones. A row carrying an `action` is never a link — a button inside an anchor swallows the tap |
+| `ConceptPicker` | Creating a concept and choosing its domain is **one selection**. cmdk's filtering is off, because it would hide the create rows exactly when they matter |
 | `EmptyState` | A surface with nothing in it yet |
 | `SessionEnd` | The queue is empty and you are done. Deliberately has no "review more" |
 | `AppShell` / `Counters` | Navigation that grows; accumulation signals in tabular mono |
@@ -258,8 +272,6 @@ Violating one of these is a bug, not a preference.
 
 Deliberately open — these need a real screen before they can be got right.
 
-- **Concept picker.** A searchable combobox is the hard interaction in this app.
-  `command` is installed; the behaviour is not designed.
 - **Swipe-to-delete** on inbox rows. Needs a real list and a real thumb.
 - **Markdown rendering** inside `.t-note`, including image sizing.
 - **Card editing inline during review** — the interaction that recovers the

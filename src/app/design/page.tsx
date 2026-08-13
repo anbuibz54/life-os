@@ -134,13 +134,13 @@ export default function DesignPage() {
             href="#"
             body="B-tree beats hash for range scans because the leaves are ordered."
             createdAt="14:02"
-            domain={domains[1]}
+            concept={{ name: 'B-tree indexes', domain: domains[1] }}
           />
           <NoteRow
             href="#"
             body="Spacing scale felt wrong at 40 characters — the 8px step is too coarse for captions."
             createdAt="11:20"
-            domain={domains[2]}
+            concept={{ name: 'Spacing scale', domain: domains[2] }}
             hasImage
           />
           <NoteRow

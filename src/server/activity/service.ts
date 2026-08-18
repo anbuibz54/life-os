@@ -80,10 +80,18 @@ function previousDay(date: string): string {
  * you have had a chance to act is a countdown timer, and countdown timers are
  * the compulsion mechanic this product rejects.
  *
- * INTERIM RULE. The streak is supposed to count the LOOP completing, not
- * volume — but review does not exist until step 6, so right now capturing is
- * the whole loop. When review ships, a day should require both halves whenever
- * something was actually due. This function is the only place that changes.
+ * SETTLED, now that review exists. A day counts when EITHER half of the loop
+ * happened, and requiring both was considered and rejected.
+ *
+ * The rejected version punishes a day when nothing was due — you cannot review
+ * an empty queue, so the streak would break for doing everything available to
+ * you. That is a countdown timer with extra steps, and countdown timers are the
+ * compulsion mechanic this product refuses. It would also push people to review
+ * easy cards to protect a number, which is the exact Duolingo failure the
+ * decision log names.
+ *
+ * What the rule still refuses to do is count volume: forty notes is one day,
+ * the same as one note.
  */
 export function streakFrom(rows: ActivityRow[], today: string): number {
   const active = new Set(

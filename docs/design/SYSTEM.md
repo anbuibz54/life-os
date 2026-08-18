@@ -155,6 +155,26 @@ Mobile-first. `max-w-md` for product screens, `px-5`.
 **Lists use rules, not cards.** These lists get long, and a dense list reads
 faster than a stack of boxes.
 
+### The review session
+
+The whole due queue loads up front and advances locally. Review is repetitive by
+design, and a round trip between every card turns a two-minute session into a
+chore — a chore gets skipped tomorrow.
+
+Ratings fire without being awaited and the next card appears immediately. The
+write is not in doubt: it is the user's own card, in a small transaction. Making
+someone watch a spinner to be told what they already know costs more than the
+rare failure does, so failures surface quietly at the end instead of
+interrupting the run.
+
+Space and Enter both reveal; 1–4 rate. Neither key means anything else here.
+
+The screen has no destinations in its shell. Leaving mid-session should be a
+deliberate act, not a row you brush past on the way to the rating buttons.
+
+**The ending is designed.** When the queue empties you are done, and there is no
+control anywhere that asks for more cards. Reaching zero is the reward.
+
 ### Authoring differs from recall
 
 `CardComposer` shows a different rule and different examples per card type.
@@ -244,6 +264,7 @@ Owned here — edit them freely. Verified on Tailwind 4 and React 19.
 | `NoteRow` / `DayDivider` | Rules not gaps, body clamped to two lines, unfiled notes aligned with filed ones. A row carrying an `action` is never a link — a button inside an anchor swallows the tap |
 | `ConceptPicker` | Creating a concept and choosing its domain is **one selection**. cmdk's filtering is off, because it would hide the create rows exactly when they matter |
 | `CardComposer` | Type first, and that type's rule stays on screen while you write. Examples are placeholders, never prefilled values |
+| `ReviewSession` | The queue loads once and advances locally — answering never waits on the network. Ratings fire without being awaited |
 | `EmptyState` | A surface with nothing in it yet |
 | `SessionEnd` | The queue is empty and you are done. Deliberately has no "review more" |
 | `AppShell` / `Counters` | Navigation that grows; accumulation signals in tabular mono |

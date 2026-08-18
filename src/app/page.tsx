@@ -6,6 +6,8 @@ import { countNotes, listNotes } from '@/server/notes/service'
 import { countConcepts, listConcepts } from '@/server/concepts/service'
 import { listDomains } from '@/server/domains/service'
 import { recentActivity, streakFrom, todayInZone } from '@/server/activity/service'
+import { countCards } from '@/server/cards/service'
+import { countDue } from '@/server/review/service'
 
 /**
  * Home — the capture surface.
@@ -20,16 +22,19 @@ import { recentActivity, streakFrom, todayInZone } from '@/server/activity/servi
 export default async function Home() {
   const { user } = await requireUser()
 
-  const [notes, noteCount, conceptCount, concepts, domains, activity] = await Promise.all([
-    listNotes(db, user.id, { limit: 50 }),
-    countNotes(db, user.id),
-    countConcepts(db, user.id),
-    // The picker filters client-side, so it needs the whole set. At the point
-    // this stops being reasonable, filing has bigger problems than latency.
-    listConcepts(db, user.id, { limit: 200 }),
-    listDomains(db),
-    recentActivity(db, user.id),
-  ])
+  const [notes, noteCount, conceptCount, cardCount, dueCount, concepts, domains, activity] =
+    await Promise.all([
+      listNotes(db, user.id, { limit: 50 }),
+      countNotes(db, user.id),
+      countConcepts(db, user.id),
+      countCards(db, user.id),
+      countDue(db, user.id),
+      // The picker filters client-side, so it needs the whole set. At the point
+      // this stops being reasonable, filing has bigger problems than latency.
+      listConcepts(db, user.id, { limit: 200 }),
+      listDomains(db),
+      recentActivity(db, user.id),
+    ])
 
   const streak = streakFrom(activity, todayInZone())
 
@@ -41,6 +46,16 @@ export default async function Home() {
   }))
 
   const destinations: Destination[] = []
+  // Review unlocks at the first card and then stays. When nothing is due it
+  // shows no number and the screen behind it is the "done" state — which is
+  // the reward, not an empty tab.
+  if (cardCount > 0) {
+    destinations.push({
+      href: '/review',
+      label: 'Review',
+      count: dueCount > 0 ? dueCount : undefined,
+    })
+  }
   if (conceptCount > 0) {
     destinations.push({ href: '/concepts', label: 'Concepts', count: conceptCount })
   }

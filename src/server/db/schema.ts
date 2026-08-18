@@ -232,6 +232,12 @@ export const cards = pgTable('cards', {
   scheduledDays: integer('scheduled_days').notNull().default(0),
   reps: integer('reps').notNull().default(0),
   lapses: integer('lapses').notNull().default(0),
+  /**
+   * How far through the learning/relearning steps this card is. ts-fsrs 5.x
+   * carries it on its Card and reads it back on the next review; without it
+   * persisted, short-term scheduling restarts its steps every time.
+   */
+  learningSteps: integer('learning_steps').notNull().default(0),
   lastReview: timestamp('last_review', { withTimezone: true }),
 
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
@@ -268,6 +274,7 @@ export const reviews = pgTable('reviews', {
   difficulty: real('difficulty').notNull(),
   elapsedDays: integer('elapsed_days').notNull(),
   scheduledDays: integer('scheduled_days').notNull(),
+  learningSteps: integer('learning_steps').notNull().default(0),
   dueAt: timestamp('due_at', { withTimezone: true }).notNull(),
   reviewedAt: timestamp('reviewed_at', { withTimezone: true }).notNull().defaultNow(),
 }, (t) => [

@@ -93,6 +93,7 @@ export async function listCardsForConcept(
       scheduledDays: cards.scheduledDays,
       reps: cards.reps,
       lapses: cards.lapses,
+      learningSteps: cards.learningSteps,
       lastReview: cards.lastReview,
       createdAt: cards.createdAt,
     })

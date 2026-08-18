@@ -15,6 +15,13 @@
       "when": 1786509025973,
       "tag": "0001_sharp_dormammu",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1787027077019,
+      "tag": "0002_colossal_the_fallen",
+      "breakpoints": true
     }
   ]
 }

@@ -24,11 +24,15 @@ import { createServerClient } from '@supabase/ssr'
 /**
  * Prefixes reachable while signed out. Everything else requires a session.
  *
- * `/design` is the component gallery. It is safe to list here because the page
- * itself returns 404 in production — signing in to look at swatches would be
- * friction for no gain in development.
+ * `/design` is the component gallery. Safe to list because the page itself
+ * returns 404 in production — signing in to look at swatches would be friction
+ * for no gain in development.
+ *
+ * `/api/mcp` authenticates with a bearer token, not a cookie. Redirecting an
+ * MCP client to an HTML login page would turn a clear 401 into a confusing
+ * 200, so this proxy must not touch it.
  */
-const PUBLIC_PREFIXES = ['/login', '/signup', '/auth', '/design']
+const PUBLIC_PREFIXES = ['/login', '/signup', '/auth', '/design', '/api/mcp']
 
 function isPublic(pathname: string) {
   return PUBLIC_PREFIXES.some((p) => pathname === p || pathname.startsWith(`${p}/`))

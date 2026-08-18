@@ -304,6 +304,42 @@ export const attachments = pgTable('attachments', {
 ])
 
 /* -------------------------------------------------------------------------- */
+/* MCP tokens                                                                  */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Bearer tokens for the MCP endpoint. One row per token, several per user.
+ *
+ * NOT the `api_keys` table the spec rules out. That exclusion is about AI
+ * provider keys — inference runs in the user's own client, so the platform
+ * holds no provider credentials and pays no inference cost. These are the
+ * opposite direction: they let the user's client prove who it is to us, and
+ * the MCP section requires them explicitly.
+ *
+ * Only the SHA-256 hash is stored. The plaintext is shown once at creation and
+ * is unrecoverable afterwards — a token table that can be read is a table that
+ * can be leaked, and there is no reason for the server to ever need it back.
+ *
+ * `lastUsedAt` is what makes an abandoned token obvious. `revokedAt` is a soft
+ * delete so a revoked token stays visibly revoked rather than silently absent.
+ */
+export const mcpTokens = pgTable('mcp_tokens', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  /** SHA-256 of the plaintext, hex. Unique so a lookup is one index hit. */
+  tokenHash: text('token_hash').notNull(),
+  /** Whose client this is — "laptop", "phone". Helps decide what to revoke. */
+  name: text('name').notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  lastUsedAt: timestamp('last_used_at', { withTimezone: true }),
+  revokedAt: timestamp('revoked_at', { withTimezone: true }),
+}, (t) => [
+  // The auth path on every single MCP call: hash the header, find this row.
+  uniqueIndex('mcp_tokens_hash_idx').on(t.tokenHash),
+  index('mcp_tokens_user_idx').on(t.userId, t.createdAt),
+])
+
+/* -------------------------------------------------------------------------- */
 /* Daily activity                                                              */
 /* -------------------------------------------------------------------------- */
 

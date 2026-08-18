@@ -3,6 +3,10 @@ import { Button } from '@/components/ui/button'
 import { AppShell } from '@/components/app-shell'
 import { requireUser } from '@/lib/auth/dal'
 import { signOut } from '../(auth)/actions'
+import { TokenManager, type TokenSummary } from '@/components/mcp/token-manager'
+import { db } from '@/server/db'
+import { listTokens } from '@/server/mcp/tokens'
+import { headers } from 'next/headers'
 
 /**
  * Account.
@@ -14,6 +18,19 @@ import { signOut } from '../(auth)/actions'
  */
 export default async function SettingsPage() {
   const { user, hasPassword, providers } = await requireUser()
+  const [rows, h] = await Promise.all([listTokens(db, user.id), headers()])
+
+  const host = h.get('x-forwarded-host') ?? h.get('host')
+  const protocol = h.get('x-forwarded-proto') ?? 'http'
+  const mcpUrl = `${protocol}://${host}/api/mcp`
+
+  const tokens: TokenSummary[] = rows.map((t) => ({
+    id: t.id,
+    name: t.name,
+    createdAt: t.createdAt.toISOString().slice(0, 10),
+    lastUsedAt: t.lastUsedAt ? t.lastUsedAt.toISOString().slice(0, 10) : null,
+    revokedAt: t.revokedAt ? t.revokedAt.toISOString().slice(0, 10) : null,
+  }))
 
   const methods = [
     hasPassword ? 'Email and password' : null,
@@ -40,6 +57,8 @@ export default async function SettingsPage() {
           <dd className="text-right">{methods.join(', ') || 'None'}</dd>
         </div>
       </dl>
+
+      <TokenManager tokens={tokens} mcpUrl={mcpUrl} />
 
       {!hasPassword ? (
         <Button variant="outline" asChild>

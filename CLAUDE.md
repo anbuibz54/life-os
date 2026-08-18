@@ -113,6 +113,10 @@ stays cheap and is what a heatmap reads from.
   unread sources are a left join with no notes. Derive state, don't maintain it.
 - No `api_keys` table. AI runs in the user's own client via MCP; the platform
   holds no keys and pays no inference cost.
+  (`mcp_tokens` is **not** this table and does not contradict it: those are
+  bearer tokens letting the user's client prove who it is to us — the opposite
+  direction — and the MCP section requires them. Only a SHA-256 hash is stored;
+  the plaintext is shown once and is unrecoverable.)
 
 ## Card types
 

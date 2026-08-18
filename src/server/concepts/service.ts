@@ -118,3 +118,37 @@ export async function findConcept(
 
   return row
 }
+
+/** One concept with its domain, for a detail screen. Scoped to the caller. */
+export async function getConceptView(
+  db: Db,
+  userId: string,
+  conceptId: string,
+): Promise<ConceptView | undefined> {
+  const [r] = await db
+    .select({
+      id: concepts.id,
+      name: concepts.name,
+      summary: concepts.summary,
+      domainId: domains.id,
+      domainName: domains.name,
+      domainAccent: domains.accent,
+      noteCount: sql<number>`(
+        select count(*)::int from ${notes} where ${notes.conceptId} = ${concepts.id}
+      )`,
+    })
+    .from(concepts)
+    .innerJoin(domains, eq(concepts.domainId, domains.id))
+    .where(and(eq(concepts.id, conceptId), eq(concepts.userId, userId)))
+    .limit(1)
+
+  if (!r) return undefined
+
+  return {
+    id: r.id,
+    name: r.name,
+    summary: r.summary,
+    domain: { id: r.domainId, name: r.domainName, accent: r.domainAccent },
+    noteCount: r.noteCount,
+  }
+}

@@ -155,6 +155,26 @@ Mobile-first. `max-w-md` for product screens, `px-5`.
 **Lists use rules, not cards.** These lists get long, and a dense list reads
 faster than a stack of boxes.
 
+### Authoring differs from recall
+
+`CardComposer` shows a different rule and different examples per card type.
+`CardFace` renders all four types identically. That is not an inconsistency —
+they are opposite problems.
+
+While writing, the difference between a discriminator and a failure mode is
+exactly what you need to see; it is the constraint that makes the card good. A
+rule in a document nobody rereads does not stop a bad card being written, so it
+has to be on screen at the moment of writing.
+
+While reviewing, that same difference is something to lean on instead of
+thinking, so it disappears. Anything that lets you recall from the shape of the
+screen is training the wrong thing.
+
+The definition-card rule is enforced in one place — `src/lib/cards.ts`, which
+has no database or framework import — so the web form and the MCP tool cannot
+drift on what ships. It is a hard rejection, not a warning: a warning people can
+click past is the same as no rule.
+
 ### Filing, in one selection
 
 The concept picker offers matching concepts *and* "Create … in ‹domain›" rows
@@ -223,6 +243,7 @@ Owned here — edit them freely. Verified on Tailwind 4 and React 19.
 | `RatingButtons` | Four neutral buttons, keys 1–4. Ignores keystrokes in editable fields — cards are editable inline during review |
 | `NoteRow` / `DayDivider` | Rules not gaps, body clamped to two lines, unfiled notes aligned with filed ones. A row carrying an `action` is never a link — a button inside an anchor swallows the tap |
 | `ConceptPicker` | Creating a concept and choosing its domain is **one selection**. cmdk's filtering is off, because it would hide the create rows exactly when they matter |
+| `CardComposer` | Type first, and that type's rule stays on screen while you write. Examples are placeholders, never prefilled values |
 | `EmptyState` | A surface with nothing in it yet |
 | `SessionEnd` | The queue is empty and you are done. Deliberately has no "review more" |
 | `AppShell` / `Counters` | Navigation that grows; accumulation signals in tabular mono |

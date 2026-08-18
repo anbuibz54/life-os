@@ -5,6 +5,7 @@ import { EmptyState } from '@/components/design/states'
 import { requireUser } from '@/lib/auth/dal'
 import { db } from '@/server/db'
 import { listConcepts } from '@/server/concepts/service'
+import { cardCountsByConcept } from '@/server/cards/service'
 
 /**
  * Concepts — the stable nodes.
@@ -18,7 +19,10 @@ import { listConcepts } from '@/server/concepts/service'
  */
 export default async function ConceptsPage() {
   const { user } = await requireUser()
-  const concepts = await listConcepts(db, user.id, { limit: 200 })
+  const [concepts, cardCounts] = await Promise.all([
+    listConcepts(db, user.id, { limit: 200 }),
+    cardCountsByConcept(db, user.id),
+  ])
 
   const byDomain = new Map<string, typeof concepts>()
   for (const c of concepts) {
@@ -53,17 +57,25 @@ export default async function ConceptsPage() {
               </div>
 
               <div className="l-rows">
-                {items.map((c) => (
-                  <div
-                    key={c.id}
-                    className="flex items-baseline justify-between gap-3 border-b border-border py-3 last:border-b-0"
-                  >
-                    <span className="t-ui min-w-0 flex-1 truncate">{c.name}</span>
-                    <span className="t-data shrink-0">
-                      {c.noteCount} {c.noteCount === 1 ? 'note' : 'notes'}
-                    </span>
-                  </div>
-                ))}
+                {items.map((c) => {
+                  const cardCount = cardCounts.get(c.id) ?? 0
+                  return (
+                    <Link
+                      key={c.id}
+                      href={`/concepts/${c.id}`}
+                      className="flex items-baseline justify-between gap-3 border-b border-border py-3 last:border-b-0 hover:bg-accent focus-visible:bg-accent"
+                    >
+                      <span className="t-ui min-w-0 flex-1 truncate">{c.name}</span>
+                      <span className="t-data shrink-0">
+                        {c.noteCount}n
+                        {/* Card count only once there is one. A concept with no
+                            cards is not failing at anything — not every concept
+                            should produce them. */}
+                        {cardCount > 0 ? ` · ${cardCount}c` : ''}
+                      </span>
+                    </Link>
+                  )
+                })}
               </div>
             </section>
           ))}

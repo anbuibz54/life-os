@@ -6,7 +6,14 @@ import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
 import { createClient } from '@/lib/supabase/server'
 
-export type AuthFormState = { error: string | null }
+export type AuthFormState = {
+  error: string | null
+  /**
+   * Set when sign-in failed only because the address is unconfirmed. Carries
+   * the email so the form can offer to resend without asking for it again.
+   */
+  unconfirmedEmail?: string
+}
 
 /** Providers we support. Microsoft is `azure` in Supabase's vocabulary. */
 export type OAuthProvider = 'google' | 'azure'
@@ -39,8 +46,21 @@ export async function signIn(_prev: AuthFormState, formData: FormData): Promise<
   const { error } = await supabase.auth.signInWithPassword(parsed.data)
 
   if (error) {
-    // Deliberately not distinguishing "no such user" from "wrong password" —
-    // that difference is an account-enumeration oracle.
+    // "Email not confirmed" is called out separately, and it is NOT an
+    // enumeration leak: Supabase only returns it once the password is
+    // correct, so the caller already holds the credentials. Collapsing it into
+    // "incorrect password" sends someone off to reset a password that was
+    // right all along — which is exactly what happened the first time this
+    // shipped.
+    if (error.code === 'email_not_confirmed') {
+      return {
+        error: 'That address has not been confirmed yet. Check your email for the link.',
+        unconfirmedEmail: parsed.data.email,
+      }
+    }
+
+    // Everything else stays deliberately indistinguishable — "no such user"
+    // and "wrong password" must read the same.
     return { error: 'Incorrect email or password.' }
   }
 
@@ -138,4 +158,36 @@ export async function signOut() {
   await supabase.auth.signOut()
   revalidatePath('/', 'layout')
   redirect('/login')
+}
+
+/**
+ * Send the confirmation link again.
+ *
+ * Supabase's built-in SMTP is rate-limited to a handful of messages an hour,
+ * so this can legitimately fail for reasons that are nobody's fault. Say so
+ * rather than pretending it worked.
+ */
+export async function resendConfirmation(email: string): Promise<AuthFormState> {
+  const parsed = z.email().safeParse(email)
+  if (!parsed.success) return { error: 'That does not look like an email address.' }
+
+  const supabase = await createClient()
+  const origin = await siteOrigin()
+
+  const { error } = await supabase.auth.resend({
+    type: 'signup',
+    email: parsed.data,
+    options: { emailRedirectTo: `${origin}/auth/callback` },
+  })
+
+  if (error) {
+    return {
+      error:
+        error.code === 'over_email_send_rate_limit'
+          ? 'Too many emails sent recently. Wait a few minutes and try again.'
+          : 'Could not send that email. Try again shortly.',
+    }
+  }
+
+  return { error: null }
 }

@@ -41,14 +41,19 @@ many domains.
 - **Nothing in `src/server/` imports from `next/*`.** Route handlers are thin:
   parse, authenticate, call a service, serialize. That boundary is what keeps a
   future extraction to a standalone API mechanical instead of a rewrite.
-- Two connection URLs, both through the pooler; the **port** is what differs.
-  `DATABASE_URL` is **transaction** mode (6543) for runtime. `DIRECT_URL` is
-  **session** mode (5432) for Drizzle migrations. They are not interchangeable:
-  transaction mode hands a backend to the next transaction mid-flight, which
-  breaks DDL, prepared statements, and the advisory lock drizzle-kit takes.
+- Both connection URLs go through the pooler in **session** mode (5432).
+  Migrations need it: transaction mode hands a backend to the next transaction
+  mid-flight, breaking DDL, prepared statements, and drizzle-kit's advisory
+  lock. Runtime needs it too, which is *not* the usual serverless advice —
+  postgres.js against transaction mode (6543) **hangs** once the query queue
+  deepens, and a hang is worse than an error. Numbers in
+  `src/server/db/index.ts`.
   (The true direct host `db.<ref>.supabase.co` is *not* usable — Supabase
   dropped public IPv4 for it, so it does not resolve without the add-on.)
-  Runtime must also pass `prepare: false`; transaction mode cannot cache them.
+- **Pool size must exceed a page's concurrent query count.** A Server Component
+  doing `Promise.all` over eight queries is eight concurrent queries on one
+  pool. `max: 1` is not "let the pooler pool" — it is a deadlock waiting for a
+  fan-out.
 - Every foreign key gets an index.
 - Migrations only go forward. No editing applied migrations.
 - Structured logging and Sentry from day one, not after users arrive.

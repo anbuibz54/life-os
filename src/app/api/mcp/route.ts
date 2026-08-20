@@ -2,6 +2,7 @@ import { WebStandardStreamableHTTPServerTransport } from '@modelcontextprotocol/
 import { db } from '@/server/db'
 import { buildMcpServer } from '@/server/mcp/server'
 import { resolveToken } from '@/server/mcp/tokens'
+import { log } from '@/server/logger'
 
 /**
  * The MCP endpoint.
@@ -46,13 +47,16 @@ function unauthorized(detail: string) {
 async function handle(request: Request): Promise<Response> {
   const auth = request.headers.get('authorization')
   if (!auth?.startsWith('Bearer ')) {
+    log.warn('mcp auth missing', { path: new URL(request.url).pathname })
     return unauthorized('Missing bearer token.')
   }
 
   const principal = await resolveToken(db, auth.slice('Bearer '.length).trim())
   if (!principal) {
     // Same message for absent, malformed, unknown, and revoked. Which one it
-    // was is not information an unauthenticated caller has earned.
+    // was is not information an unauthenticated caller has earned — but it is
+    // worth logging, since a run of these is what a probe looks like.
+    log.warn('mcp auth rejected', { path: new URL(request.url).pathname })
     return unauthorized('Invalid or revoked token.')
   }
 

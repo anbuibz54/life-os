@@ -6,6 +6,7 @@ import { db } from '@/server/db'
 import { requireUser } from '@/lib/auth/dal'
 import { rateCard, ratingInput } from '@/server/review/service'
 import { markActivity, todayInZone } from '@/server/activity/service'
+import { log } from '@/server/logger'
 
 export type RateOutcome = { error: string | null }
 
@@ -30,7 +31,12 @@ export async function rateCardAction(input: {
   if (!parsed.success) return { error: 'That rating did not make sense.' }
 
   const result = await rateCard(db, user.id, parsed.data.cardId, parsed.data.rating)
-  if (!result.ok) return { error: 'That card no longer exists.' }
+  if (!result.ok) {
+    // The session advances optimistically, so a lost rating is otherwise only
+    // ever a number at the end of the run. Scheduling data is the product.
+    log.error('rating not saved', { userId: user.id, cardId: parsed.data.cardId })
+    return { error: 'That card no longer exists.' }
+  }
 
   await markActivity(db, user.id, todayInZone(input.localDate), 'reviewed')
 

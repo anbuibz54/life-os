@@ -8,6 +8,7 @@ import { listDomains } from '@/server/domains/service'
 import { recentActivity, streakFrom, todayInZone } from '@/server/activity/service'
 import { countCards } from '@/server/cards/service'
 import { countDue } from '@/server/review/service'
+import { timed } from '@/server/logger'
 
 /**
  * Home — the capture surface.
@@ -23,18 +24,20 @@ export default async function Home() {
   const { user } = await requireUser()
 
   const [notes, noteCount, conceptCount, cardCount, dueCount, concepts, domains, activity] =
-    await Promise.all([
-      listNotes(db, user.id, { limit: 50 }),
-      countNotes(db, user.id),
-      countConcepts(db, user.id),
-      countCards(db, user.id),
-      countDue(db, user.id),
-      // The picker filters client-side, so it needs the whole set. At the point
-      // this stops being reasonable, filing has bigger problems than latency.
-      listConcepts(db, user.id, { limit: 200 }),
-      listDomains(db),
-      recentActivity(db, user.id),
-    ])
+    await timed('home.load', () =>
+      Promise.all([
+        listNotes(db, user.id, { limit: 50 }),
+        countNotes(db, user.id),
+        countConcepts(db, user.id),
+        countCards(db, user.id),
+        countDue(db, user.id),
+        // The picker filters client-side, so it needs the whole set. At the point
+        // this stops being reasonable, filing has bigger problems than latency.
+        listConcepts(db, user.id, { limit: 200 }),
+        listDomains(db),
+        recentActivity(db, user.id),
+      ]),
+    )
 
   const streak = streakFrom(activity, todayInZone())
 

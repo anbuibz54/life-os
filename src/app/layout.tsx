@@ -25,9 +25,26 @@ const literata = Literata({
 export const metadata: Metadata = {
   title: 'Life OS',
   description: 'One place for what you are learning, across every domain.',
+  applicationName: 'Life OS',
+  icons: {
+    icon: [{ url: '/icon-192.png', sizes: '192x192', type: 'image/png' }],
+    apple: [{ url: '/apple-icon.png', sizes: '180x180', type: 'image/png' }],
+  },
+  appleWebApp: {
+    // iOS ignores the manifest's display mode; this is what gives an
+    // added-to-home-screen launch the same chrome-less window Android gets.
+    capable: true,
+    title: 'Life OS',
+    statusBarStyle: 'black-translucent',
+  },
+  // Phone numbers and dates in note bodies should not become tap targets.
+  formatDetection: { telephone: false, date: false, address: false, email: false },
 }
 
 export const viewport: Viewport = {
+  // Fills the notch area on an installed iOS app, and stops the layout being
+  // letterboxed by the safe area.
+  viewportFit: 'cover',
   // Dark is the primary context — two hours on a weekday evening, phone in
   // hand — but the OS preference is still honoured.
   colorScheme: 'light dark',

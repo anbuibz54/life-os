@@ -110,5 +110,14 @@ export async function proxy(request: NextRequest) {
 export const config = {
   // Skip static assets and image optimisation. Auth-relevant routes only —
   // proxy running on every prefetched image is pure latency.
-  matcher: ['/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)'],
+  /**
+   * `manifest.webmanifest` is excluded for a reason worth keeping: the
+   * browser fetches it to decide whether the app is installable, and this
+   * proxy was redirecting that fetch to `/login`. The browser got an HTML
+   * page where it wanted JSON, so the install prompt silently never
+   * appeared — no error anywhere, just an app that would not install.
+   */
+  matcher: [
+    '/((?!_next/static|_next/image|favicon.ico|manifest.webmanifest|robots.txt|sitemap.xml|.*\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)',
+  ],
 }

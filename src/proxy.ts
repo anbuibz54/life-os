@@ -72,9 +72,24 @@ export async function proxy(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser()
 
+  /**
+   * An authenticated session with no email address counts as signed OUT here.
+   *
+   * `users.email` is NOT NULL and the data access layer refuses a session
+   * without one, so such a session can never reach a real screen. Treating it
+   * as signed in would send it to `/`, which bounces it to `/login`, which
+   * this proxy bounces back to `/` — an infinite redirect.
+   *
+   * Supabase can produce one: both OAuth providers have "Allow users without
+   * an email" enabled. The callback signs these sessions out with an
+   * explanation; this is the guard that stops the loop forming in the
+   * meantime.
+   */
+  const usable = user?.email ? user : null
+
   const { pathname } = request.nextUrl
 
-  if (!user && !isPublic(pathname)) {
+  if (!usable && !isPublic(pathname)) {
     const url = request.nextUrl.clone()
     url.pathname = '/login'
     // Remember where they were headed so login can send them back.
@@ -82,7 +97,7 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(url)
   }
 
-  if (user && (pathname === '/login' || pathname === '/signup')) {
+  if (usable && (pathname === '/login' || pathname === '/signup')) {
     const url = request.nextUrl.clone()
     url.pathname = '/'
     url.search = ''

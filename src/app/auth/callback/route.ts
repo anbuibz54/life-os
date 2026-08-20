@@ -42,6 +42,25 @@ export async function GET(request: NextRequest) {
     )
   }
 
+  /**
+   * A provider can return an identity with no email address — both providers
+   * have "Allow users without an email" enabled in Supabase. This app cannot
+   * use such an account: `users.email` is NOT NULL and every surface is keyed
+   * to it. Sign the session out here rather than leaving a half-authenticated
+   * state that no screen will accept.
+   */
+  if (!data.user?.email) {
+    await supabase.auth.signOut()
+    return NextResponse.redirect(
+      new URL(
+        `/login?error=${encodeURIComponent(
+          'That account did not share an email address, which this app needs. Try another sign-in method.',
+        )}`,
+        origin,
+      ),
+    )
+  }
+
   // No `email` identity means password sign-in is not available on this
   // account yet — it was created through Google or Microsoft.
   const hasPassword = data.user?.identities?.some((i) => i.provider === 'email') ?? false

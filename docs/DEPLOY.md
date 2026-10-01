@@ -15,7 +15,7 @@ staging to be wrong in. Migrations are already applied there.
 Import `anbuibz54/life-os`. Framework detection handles the rest; there is no
 `vercel.json` because nothing needs overriding.
 
-Set these four environment variables (Production, Preview, and Development):
+Set these environment variables (Production, Preview, and Development):
 
 | Name | Value |
 |---|---|
@@ -24,6 +24,13 @@ Set these four environment variables (Production, Preview, and Development):
 | `NEXT_PUBLIC_SUPABASE_URL` | `https://fdbgoivddjlipjofyzed.supabase.co` |
 | `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | `sb_publishable_…` |
 | `SUPABASE_SECRET_KEY` | `sb_secret_…` — server only, never `NEXT_PUBLIC_` |
+| `NEXT_PUBLIC_SITE_URL` | `https://life-os-ans-projects-34be2a0b.vercel.app` — the stable production domain |
+
+> **Why `NEXT_PUBLIC_SITE_URL` matters.** Account shows the MCP endpoint to paste
+> into a client. Without this variable it falls back to the host the request
+> arrived on, and on Vercel that is the per-deployment hostname
+> (`life-os-<hash>-….vercel.app`) — an address that changes every deploy. It is
+> inlined at build time, so changing it needs a redeploy, not just a save.
 
 Copy the values from `.env.local`.
 

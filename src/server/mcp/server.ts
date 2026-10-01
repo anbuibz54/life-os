@@ -1,7 +1,7 @@
 /**
  * The MCP tool surface.
  *
- * Five tools. **The descriptions are the prompt** — they are the only thing
+ * Six tools. **The descriptions are the prompt** — they are the only thing
  * steering a model that cannot see this codebase, so they carry the product's
  * rules in prose rather than assuming any are obvious.
  *
@@ -38,9 +38,9 @@ export function buildMcpServer(db: Db, principal: Principal, baseUrl: string) {
       instructions: [
         "Life OS is the user's personal knowledge base: notes attach to concepts, concepts produce spaced-repetition cards.",
         '',
-        'Capture is cheap and should stay that way — when the user says something worth keeping, call create_note immediately. Never ask which concept it belongs to first; filing happens later in the app, and a note with no concept is a completely normal note.',
+        'Capture is cheap and should stay that way — when the user says something worth keeping, call create_note immediately. Never ask which concept it belongs to first; filing happens later in the app, and a note with no concept is a completely normal note. If a concept was already resolved earlier in this conversation, pass it as concept_id so the user does not have to file by hand.',
         '',
-        'Before creating a concept, call list_concepts and reuse an existing one. Duplicate concepts are the main way this database degrades, and nothing merges them later.',
+        'Before creating a concept, call list_concepts and reuse an existing one. Duplicate concepts are the main way this database degrades, and nothing merges them later. Call list_domains for the domain keys create_concept accepts, instead of learning them by passing a wrong one.',
         '',
         'Before drafting cards, call get_notes_for_concept so you do not write a card that repeats one already there.',
       ].join('\n'),
@@ -58,6 +58,8 @@ export function buildMcpServer(db: Db, principal: Principal, baseUrl: string) {
         '',
         'Only `body` is required. **Never ask the user which concept it belongs to before calling this** — capture must not block on classification. An unfiled note is a normal, healthy note; the user files it later in the app.',
         '',
+        'If you already know the concept — you created it or listed it earlier in this same conversation — pass `concept_id`. That is the only case where naming one is better than not: it saves the user filing by hand later. Do not go looking for a concept to attach just to fill the field.',
+        '',
         "Body is markdown. Prefer the user's own words over a tidied summary: the phrasing they used is part of what they will recognise later.",
         '',
         'If you are recording something you inferred or drafted rather than something the user said, set authored_by to "ai" so their corpus stays honest about its own provenance.',
@@ -71,19 +73,46 @@ export function buildMcpServer(db: Db, principal: Principal, baseUrl: string) {
           .enum(['human', 'ai'])
           .optional()
           .describe('"human" (default) if this is the user\'s own thinking; "ai" if you drafted it.'),
+        concept_id: z
+          .uuid()
+          .optional()
+          .describe(
+            'Optional. A concept id already known from this conversation. Omit unless you already have one.',
+          ),
       },
     },
-    async ({ body, authored_by }) => {
+    async ({ body, authored_by, concept_id }) => {
+      // Resolved here rather than in the service, matching create_concept: the
+      // id arrives from a model, so a concept that does not exist must come
+      // back as a message it can act on, not as a foreign-key error.
+      let conceptId: string | undefined
+      let conceptName: string | undefined
+      if (concept_id) {
+        const concept = await findConcept(db, principal.userId, concept_id)
+        if (!concept) {
+          return text(
+            `No concept ${concept_id}. Call list_concepts and reuse a match, or call create_concept first — or omit concept_id and capture the note unfiled, which is a normal note.`,
+          )
+        }
+        conceptId = concept.id
+        conceptName = concept.name
+      }
+
       const note = await createNote(db, principal.userId, {
         body,
         sourceChannel: 'mcp',
         authoredBy: authored_by ?? 'human',
+        conceptId,
       })
       // MCP capture counts toward the streak exactly like web capture does.
       // Server date, since a tool call carries no timezone.
       await markActivity(db, principal.userId, todayInZone(), 'captured')
 
-      return text(`Captured note ${note.id}\n${baseUrl}/`)
+      return text(
+        conceptId
+          ? `Captured note ${note.id} under "${conceptName}"\n${baseUrl}/concepts/${conceptId}`
+          : `Captured note ${note.id}\n${baseUrl}/`,
+      )
     },
   )
 
@@ -114,6 +143,31 @@ export function buildMcpServer(db: Db, principal: Principal, baseUrl: string) {
       }
       return text(
         found.map((c) => `${c.id}  ${c.name}  [${c.domain.name}]  ${c.noteCount} notes`).join('\n'),
+      )
+    },
+  )
+
+  /* ------------------------------------------------------------------ */
+
+  server.registerTool(
+    'list_domains',
+    {
+      title: 'List domains',
+      description: [
+        'List the domains a concept can be filed under.',
+        '',
+        '**Call this before create_concept** so you pass a real domain key. Domains are global vocabulary shared by every user — a fixed set that grows by inserting a row, never by a migration — and this is the only way to see the current list without provoking an error.',
+        '',
+        'Use the `key` value for create_concept; the `name` is what the user sees.',
+      ].join('\n'),
+      inputSchema: {},
+    },
+    async () => {
+      const rows = await listDomains(db)
+      if (rows.length === 0) return text('No domains exist yet.')
+
+      return text(
+        rows.map((d) => `${d.key}  "${d.name}"`).join('\n'),
       )
     },
   )
@@ -178,7 +232,9 @@ export function buildMcpServer(db: Db, principal: Principal, baseUrl: string) {
         '**Call this before drafting cards.** It is the only way to avoid writing a card that duplicates one the user already has, and to ground a card in what they actually wrote rather than in general knowledge.',
       ].join('\n'),
       inputSchema: {
-        concept_id: z.string().describe('Concept id, from list_concepts or create_concept.'),
+        concept_id: z
+          .uuid()
+          .describe('Concept id, from list_concepts or create_concept.'),
       },
     },
     async ({ concept_id }) => {

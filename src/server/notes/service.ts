@@ -7,7 +7,7 @@
  * No `next/*` imports.
  */
 
-import { and, desc, eq, isNull, lt, sql } from 'drizzle-orm'
+import { and, desc, eq, ilike, isNull, lt, or, sql } from 'drizzle-orm'
 import { z } from 'zod'
 import type { Db } from '../db'
 import { concepts, domains, notes } from '../db/schema'
@@ -17,10 +17,16 @@ export type Note = typeof notes.$inferSelect
 /**
  * Capture input.
  *
- * `conceptId` is absent here on purpose — capture must never block on
- * classification. Filing happens later, from the inbox. A capture path that
- * asks "which concept?" mid-thought stops being used, and an unused capture
- * box makes every other feature worthless.
+ * `conceptId` is **optional and must stay optional** — capture must never block
+ * on classification, and a capture path that asks "which concept?" mid-thought
+ * stops being used. An unfiled note is a normal note; filing happens later in
+ * the inbox.
+ *
+ * Passing a concept is allowed because the caller often already knows one — an
+ * MCP client that just created the concept, or the web UI filing on the way in.
+ * A caller that sets it must have resolved the id through `findConcept` first:
+ * nothing here re-checks ownership, and a foreign id would file the note under
+ * another user's concept.
  */
 export const createNoteInput = z.object({
   body: z
@@ -33,6 +39,7 @@ export const createNoteInput = z.object({
   sourceChannel: z.enum(['web', 'mcp']).default('web'),
   authoredBy: z.enum(['human', 'ai']).default('human'),
   sourceId: z.uuid().optional(),
+  conceptId: z.uuid().optional(),
 })
 
 export type CreateNoteInput = z.infer<typeof createNoteInput>
@@ -50,7 +57,8 @@ export async function createNote(
       sourceChannel: input.sourceChannel,
       authoredBy: input.authoredBy,
       sourceId: input.sourceId ?? null,
-      // conceptId deliberately left null.
+      // Null when the caller did not name a concept — the normal case.
+      conceptId: input.conceptId ?? null,
     })
     .returning()
 
@@ -63,6 +71,41 @@ export type NoteWithConcept = {
   body: string
   createdAt: Date
   concept: { id: string; name: string; domain: { name: string; accent: number } } | null
+}
+
+/** The columns every note list needs, so the shapes cannot drift apart. */
+const noteWithConceptColumns = {
+  id: notes.id,
+  body: notes.body,
+  createdAt: notes.createdAt,
+  conceptId: concepts.id,
+  conceptName: concepts.name,
+  domainName: domains.name,
+  domainAccent: domains.accent,
+}
+
+function toNoteWithConcept(r: {
+  id: string
+  body: string
+  createdAt: Date
+  conceptId: string | null
+  conceptName: string | null
+  domainName: string | null
+  domainAccent: number | null
+}): NoteWithConcept {
+  return {
+    id: r.id,
+    body: r.body,
+    createdAt: r.createdAt,
+    concept:
+      r.conceptId && r.conceptName && r.domainName != null && r.domainAccent != null
+        ? {
+            id: r.conceptId,
+            name: r.conceptName,
+            domain: { name: r.domainName, accent: r.domainAccent },
+          }
+        : null,
+  }
 }
 
 /**
@@ -79,15 +122,7 @@ export async function listNotes(
   { limit = 50, before }: { limit?: number; before?: Date } = {},
 ): Promise<NoteWithConcept[]> {
   const rows = await db
-    .select({
-      id: notes.id,
-      body: notes.body,
-      createdAt: notes.createdAt,
-      conceptId: concepts.id,
-      conceptName: concepts.name,
-      domainName: domains.name,
-      domainAccent: domains.accent,
-    })
+    .select(noteWithConceptColumns)
     .from(notes)
     .leftJoin(concepts, eq(notes.conceptId, concepts.id))
     .leftJoin(domains, eq(concepts.domainId, domains.id))
@@ -99,19 +134,57 @@ export async function listNotes(
     .orderBy(desc(notes.createdAt))
     .limit(limit)
 
-  return rows.map((r) => ({
-    id: r.id,
-    body: r.body,
-    createdAt: r.createdAt,
-    concept:
-      r.conceptId && r.conceptName && r.domainName != null && r.domainAccent != null
-        ? {
-            id: r.conceptId,
-            name: r.conceptName,
-            domain: { name: r.domainName, accent: r.domainAccent },
-          }
-        : null,
-  }))
+  return rows.map(toNoteWithConcept)
+}
+
+/**
+ * Escape LIKE wildcards, so a search for "%" or "a_b" matches those characters
+ * rather than everything and "any character". Postgres defaults LIKE's escape
+ * character to a backslash, so a backslash in the input has to be escaped too.
+ */
+function likePattern(term: string): string {
+  return `%${term.replace(/[\\%_]/g, (c) => `\\${c}`)}%`
+}
+
+/**
+ * Search note bodies and the names of the concepts the notes are filed under.
+ *
+ * Matching the concept name as well as the body is what makes a search for
+ * "propagation" find the note that never uses the word: the concept is the
+ * stronger signal of what the note is about, and the note is what the user
+ * wanted to read again.
+ *
+ * `ILIKE` rather than full-text search, deliberately. The corpus is one
+ * person's — thousands of rows, all resident in cache — and what people type
+ * is a substring they remember, not a lexeme. Full-text search is the upgrade
+ * path once the corpus is big enough to measure; see `docs/ideas.md`.
+ */
+export async function searchNotes(
+  db: Db,
+  userId: string,
+  term: string,
+  { limit = 50 }: { limit?: number } = {},
+): Promise<NoteWithConcept[]> {
+  const trimmed = term.trim()
+  if (trimmed.length === 0) return []
+
+  const pattern = likePattern(trimmed)
+
+  const rows = await db
+    .select(noteWithConceptColumns)
+    .from(notes)
+    .leftJoin(concepts, eq(notes.conceptId, concepts.id))
+    .leftJoin(domains, eq(concepts.domainId, domains.id))
+    .where(
+      and(
+        eq(notes.userId, userId),
+        or(ilike(notes.body, pattern), ilike(concepts.name, pattern)),
+      ),
+    )
+    .orderBy(desc(notes.createdAt))
+    .limit(limit)
+
+  return rows.map(toNoteWithConcept)
 }
 
 /** Notes filed under one concept, oldest first — this reads as a history. */

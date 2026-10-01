@@ -12,9 +12,10 @@
  * No `next/*` imports.
  */
 
-import { asc } from 'drizzle-orm'
+import { asc, sql } from 'drizzle-orm'
+import { z } from 'zod'
 import type { Db } from '../db'
-import { domains } from '../db/schema'
+import { concepts, domains } from '../db/schema'
 
 export type Domain = typeof domains.$inferSelect
 
@@ -49,4 +50,71 @@ export async function seedDomains(db: Db): Promise<number> {
     .returning()
 
   return rows.length
+}
+
+/**
+ * Machine key derived from the name.
+ *
+ * Derived rather than asked for: `key` exists so MCP callers and the seed can
+ * name a domain stably, and it is not something a person should have to invent
+ * while adding "Workouts" to their own app. Renaming a domain later leaves the
+ * key alone, which is the point of having both.
+ */
+export function domainKeyFrom(name: string): string {
+  return name
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 60)
+}
+
+export const createDomainInput = z.object({
+  name: z
+    .string()
+    .trim()
+    .min(1, 'A domain needs a name.')
+    .max(60, 'That name is too long.')
+    .refine((n) => domainKeyFrom(n).length > 0, 'That name needs a letter or a number.'),
+  /** Palette slot 1–6. See docs/design/SYSTEM.md. */
+  accent: z.coerce.number().int().min(1).max(6).default(1),
+})
+
+export type CreateDomainInput = z.infer<typeof createDomainInput>
+
+/**
+ * Add a domain. Global, so the only failure is "already there".
+ *
+ * `onConflictDoNothing` on the derived key rather than a SELECT-then-INSERT:
+ * two callers adding "Databases" at once would race, and a unique index is the
+ * one place that race can actually be settled.
+ *
+ * Returns null when the key already exists — the caller decides whether that
+ * is an error or simply the outcome.
+ */
+export async function createDomain(
+  db: Db,
+  input: CreateDomainInput,
+): Promise<Domain | null> {
+  const [row] = await db
+    .insert(domains)
+    .values({
+      key: domainKeyFrom(input.name),
+      name: input.name.trim(),
+      accent: input.accent,
+    })
+    .onConflictDoNothing({ target: domains.key })
+    .returning()
+
+  return row ?? null
+}
+
+/** How many concepts each domain carries — the only count the picker needs. */
+export async function countConceptsByDomain(db: Db): Promise<Map<string, number>> {
+  const rows = await db
+    .select({ domainId: concepts.domainId, count: sql<number>`count(*)::int` })
+    .from(concepts)
+    .groupBy(concepts.domainId)
+
+  return new Map(rows.map((r) => [r.domainId, r.count]))
 }

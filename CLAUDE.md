@@ -153,12 +153,17 @@ written, not hard. Flag for rewrite rather than letting FSRS grind it forever.
 
 ## MCP tool surface
 
-Five tools. Tool descriptions are the prompt — most tuning effort goes here.
+Six tools. Tool descriptions are the prompt — most tuning effort goes here.
 
 - `create_note` — body required, everything else optional. **Must never require
   a concept.** If it blocks mid-conversation, capture stops being used.
+  `concept_id` is accepted when the client already resolved one in the same
+  conversation (it saves a filing step); it is never something to ask for.
 - `list_concepts` — with search filter. This is what makes classification
   possible; the AI reads existing concepts before deciding.
+- `list_domains` — the valid `domain` values for `create_concept`. Added because
+  the only way to discover them used to be passing a wrong one and reading the
+  error.
 - `create_concept` — name, domain, summary.
 - `get_notes_for_concept` — read before drafting cards, to avoid duplicates.
 - `create_card` — concept_id, type, front, back. Description must name the four
@@ -234,6 +239,13 @@ Each step usable before the next begins. Steps 1–6 are the loop — stopping a
 8. Deploy, install on phone
 9. Images (paste/drop → upload → markdown in body)
 10. Inbox, streak
+11. Search — substring over note bodies and the concept names they are filed
+    under. `ILIKE`, not full-text: the corpus is one person's, and what people
+    type is a fragment they remember. Upgrade path in `docs/ideas.md`.
+12. Domain management in Account — adding a domain is a row, so it needs a
+    surface, or every new domain is a script run against the database.
+13. Concept page as a reading surface — notes first with an outline, cards
+    collapsed. The screen the corpus is actually re-read on.
 
 ## Deferred — do not build yet
 

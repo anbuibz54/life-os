@@ -62,6 +62,11 @@ export default async function Home() {
   if (conceptCount > 0) {
     destinations.push({ href: '/concepts', label: 'Concepts', count: conceptCount })
   }
+  // Search unlocks with the first note: before that there is nothing to find,
+  // and one note is enough to need finding again.
+  if (noteCount > 0) {
+    destinations.push({ href: '/search', label: 'Search' })
+  }
   destinations.push({ href: '/settings', label: 'Account' })
 
   return (

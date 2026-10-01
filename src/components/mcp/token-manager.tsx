@@ -43,13 +43,22 @@ export function TokenManager({ tokens, mcpUrl }: { tokens: TokenSummary[]; mcpUr
         </p>
       </div>
 
+      {/* The endpoint is shown whether or not a token was just minted. It used
+          to appear only in the post-mint block, which meant the one address a
+          client needs was invisible to anyone coming back to add a second
+          client — the address was in the app and the user still had to guess it
+          from the browser bar. */}
+      <div className="flex flex-col gap-1 rounded-md border border-border px-3 py-2.5">
+        <span className="t-marker">Endpoint</span>
+        <code className="font-mono text-xs break-all">{mcpUrl}</code>
+      </div>
+
       {state.token ? (
         <div className="flex flex-col gap-2 rounded-md border border-border bg-card p-3">
           <span className="t-marker">Copy this now — it is not shown again</span>
           <code className="font-mono text-xs break-all">{state.token}</code>
           <p className="t-ui text-muted-foreground text-pretty">
-            Add it to your client as a bearer token for{' '}
-            <code className="font-mono text-xs break-all">{mcpUrl}</code>
+            Add it to your client as a bearer token for the endpoint above.
           </p>
         </div>
       ) : null}

@@ -134,6 +134,14 @@ is the capture surface — the app opens where a thought goes.
 
 ## Still open
 
+- **Supabase Site URL is still `http://localhost:3000`.** Not a breakage — the
+  redirect allowlist does contain the production domain (verified: `authorize`
+  returns 302 to Google for the deployed URL, `localhost:3000` and
+  `localhost:3001`), and the app passes an explicit `emailRedirectTo` /
+  `redirectTo`. What it affects is any flow relying on the default:
+  admin-generated magic links land on localhost, and so would signup
+  confirmation emails. Set it to the production domain. Note for local work:
+  the dev server has to run on **3000** for a default-redirect link to work.
 - **Sentry.** `CLAUDE.md` asks for it from day one and it is not wired up.
   Structured logging is in (`src/server/logger.ts`, JSON lines with credential
   redaction, and a `timed()` helper that flags slow operations). Sentry needs
